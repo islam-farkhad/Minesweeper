@@ -46,65 +46,6 @@ class Minesweeper:
                 self.field[x - 1][y - 1].is_mine = True
                 self.update_mines_qty_nearby_for_neighbours(self.field[x - 1][y - 1])
 
-    def update_mines_qty_nearby_for_neighbours(self, mine_cell):
-        list_of_neighbours = self.get_neighbours(mine_cell)
-
-        for cell in list_of_neighbours:
-            cell.mines_qty_nearby += 1
-
-    def get_neighbours(self, cell, bfs=False):
-        i = cell.x
-        j = cell.y
-        list_of_neighbours = []
-
-        if i > 0 and j > 0 and not bfs:
-            list_of_neighbours.append(self.field[i - 1][j - 1])
-
-        if i > 0:
-            list_of_neighbours.append(self.field[i - 1][j])
-
-        if i > 0 and j + 1 < self.field_width and not bfs:
-            list_of_neighbours.append(self.field[i - 1][j + 1])
-
-        if j + 1 < self.field_width:
-            list_of_neighbours.append(self.field[i][j + 1])
-
-        if i + 1 < self.field_height and j + 1 < self.field_width and not bfs:
-            list_of_neighbours.append(self.field[i + 1][j + 1])
-
-        if i + 1 < self.field_height:
-            list_of_neighbours.append(self.field[i + 1][j])
-
-        if i + 1 < self.field_height and j > 0 and not bfs:
-            list_of_neighbours.append(self.field[i + 1][j - 1])
-
-        if j > 0:
-            list_of_neighbours.append(self.field[i][j - 1])
-
-        return list_of_neighbours
-
-    def bfs(self, cell):
-
-        queue = collections.deque([cell])
-        while queue:
-            vertex = queue.popleft()
-            if vertex.mines_qty_nearby > 0:
-                if not vertex.is_opened:
-                    vertex.is_opened = True
-                    self.count_opened_cells += 1
-                continue
-
-            list_of_neighbours = self.get_neighbours(vertex, bfs=True)
-
-            for neighbour in list_of_neighbours:
-
-                if neighbour.is_opened:
-                    continue
-
-                queue.append(neighbour)
-                neighbour.is_opened = True
-                self.count_opened_cells += 1
-
     def open_cell(self, i, j):
         cell = self.field[i - 1][j - 1]
 
@@ -138,6 +79,19 @@ class Minesweeper:
         if self.game_status is GameStatus.IN_PROGRESS:
             cell.flag = not cell.flag
 
+    def get_game_status(self):
+        return self.game_status.name
+
+    def get_game_time(self):
+        if self.game_status is GameStatus.IN_PROGRESS:
+            return round(time.time() - self.game_start_time)
+
+        elif self.game_status is GameStatus.NOT_STARTED:
+            return 0
+
+        else:
+            return round(self.game_end_time - self.game_start_time)
+
     def render_field(self):
         list_of_rows = []
         for i in self.field:
@@ -159,27 +113,78 @@ class Minesweeper:
 
         return list_of_rows
 
-    def get_game_time(self):
-        if self.game_status is GameStatus.IN_PROGRESS:
-            return round(time.time() - self.game_start_time)
+    def get_neighbours(self, cell):
+        i = cell.x
+        j = cell.y
+        list_of_neighbours = []
 
-        elif self.game_status is GameStatus.NOT_STARTED:
-            return 0
+        if i > 0 and j > 0:
+            list_of_neighbours.append(self.field[i - 1][j - 1])
 
-        else:
-            return round(self.game_end_time - self.game_start_time)
+        if i > 0:
+            list_of_neighbours.append(self.field[i - 1][j])
 
-    def get_game_status(self):
-        return self.game_status.name
+        if i > 0 and j + 1 < self.field_width:
+            list_of_neighbours.append(self.field[i - 1][j + 1])
+
+        if j + 1 < self.field_width:
+            list_of_neighbours.append(self.field[i][j + 1])
+
+        if i + 1 < self.field_height and j + 1 < self.field_width:
+            list_of_neighbours.append(self.field[i + 1][j + 1])
+
+        if i + 1 < self.field_height:
+            list_of_neighbours.append(self.field[i + 1][j])
+
+        if i + 1 < self.field_height and j > 0:
+            list_of_neighbours.append(self.field[i + 1][j - 1])
+
+        if j > 0:
+            list_of_neighbours.append(self.field[i][j - 1])
+
+        return list_of_neighbours
+
+    def update_mines_qty_nearby_for_neighbours(self, mine_cell):
+        list_of_neighbours = self.get_neighbours(mine_cell)
+
+        for cell in list_of_neighbours:
+            cell.mines_qty_nearby += 1
+
+    def bfs(self, cell):
+
+        queue = collections.deque([cell])
+        while queue:
+            vertex = queue.popleft()
+            if vertex.flag:
+                continue
+
+            if vertex.mines_qty_nearby > 0:
+                if not vertex.is_opened:
+                    vertex.is_opened = True
+                    self.count_opened_cells += 1
+                continue
+
+            list_of_neighbours = self.get_neighbours(vertex)
+
+            for neighbour in list_of_neighbours:
+
+                if neighbour.is_opened or neighbour.flag:
+                    continue
+
+                queue.append(neighbour)
+                neighbour.is_opened = True
+                self.count_opened_cells += 1
 
 
-game = Minesweeper(20, 30, 100)
+# Using example
+game = Minesweeper(16, 30, 99)
+
 
 while (game.game_status is not GameStatus.DEFEAT) and (game.game_status is not GameStatus.VICTORY):
-    i, j = list(map(int, input().split()))
-    button = input()
+    i, j = list(map(int, input("Enter cell coordinates: ").split()))
+    button = input("Press F to mark cell, press any character to open cell: ")
 
-    if button == "f":
+    if button == "F":
         game.mark_cell(i, j)
     else:
         game.open_cell(i, j)
